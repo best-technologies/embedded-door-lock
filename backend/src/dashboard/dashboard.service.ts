@@ -18,13 +18,14 @@ export class DashboardService {
       const users = usersResult.data || [];
       
       const devices = await this.devicesService.findAll();
-      const accessLogs = await this.accessService.findAll({});
+      const accessLogsResponse = await this.accessService.findAll({});
+      const accessLogs = (accessLogsResponse as any)?.data || [];
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
       const todayLogs = accessLogs.filter(
-        (log) => new Date(log.timestamp) >= today,
+        (log: any) => new Date(log.timestamp) >= today,
       );
 
       return {
@@ -34,8 +35,8 @@ export class DashboardService {
         devicesOnline: devices.filter((d) => d.status === 'online').length,
         devicesOffline: devices.filter((d) => d.status === 'offline').length,
         accessAttemptsToday: todayLogs.length,
-        successfulAttempts: todayLogs.filter((l) => l.status === 'success').length,
-        failedAttempts: todayLogs.filter((l) => l.status === 'failed').length,
+        successfulAttempts: todayLogs.filter((l: any) => l.status === 'success').length,
+        failedAttempts: todayLogs.filter((l: any) => l.status === 'failed').length,
       };
     } catch (error: any) {
       // Return default values on error

@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-class UserInfoDto {
+export class UserInfoDto {
   @ApiProperty({ example: 'BTL-25-11-13' })
   userId: string;
 
@@ -32,6 +32,17 @@ class UserInfoDto {
   fingerprintIds: number[];
 }
 
+export class VerifyRfidDataDto {
+  @ApiProperty({ example: true })
+  authorized: boolean;
+
+  @ApiProperty({ type: UserInfoDto, nullable: true, required: false })
+  user: UserInfoDto | null;
+
+  @ApiProperty({ example: 'RFID tag not registered', required: false })
+  reason?: string;
+}
+
 export class VerifyRfidResponseDto {
   @ApiProperty({ example: true })
   success: boolean;
@@ -39,18 +50,7 @@ export class VerifyRfidResponseDto {
   @ApiProperty({ example: 'RFID tag verified successfully' })
   message: string;
 
-  @ApiProperty({
-    type: 'object',
-    properties: {
-      authorized: { type: 'boolean', example: true },
-      user: { type: 'object', nullable: true },
-      reason: { type: 'string', required: false },
-    },
-  })
-  data: {
-    authorized: boolean;
-    user: UserInfoDto | null;
-    reason?: string;
-  };
+  @ApiProperty({ type: VerifyRfidDataDto })
+  data: VerifyRfidDataDto;
 }
 

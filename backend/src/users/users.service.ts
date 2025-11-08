@@ -291,14 +291,15 @@ export class UsersService {
         where: { userId },
       });
 
-      const allLogs = await this.accessService.findAll({
+      const allLogsResponse = await this.accessService.findAll({
         userId,
         status: filters?.type === 'success' ? 'success' : filters?.type === 'failed' ? 'failed' : undefined,
         from: filters?.from,
         to: filters?.to,
       });
+      const allLogs = (allLogsResponse as any)?.data || [];
 
-      const history = allLogs.map((log) => ({
+      const history = allLogs.map((log: any) => ({
         timestamp: log.timestamp,
         deviceId: log.deviceId,
         accessType: log.method,
