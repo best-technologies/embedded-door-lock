@@ -10,4 +10,148 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Models will be added here
+enum UserStatus {
+  active
+  suspended
+  terminated
+}
+
+enum AccessMethod {
+  rfid
+  fingerprint
+  keypad
+}
+
+enum AccessStatus {
+  success
+  failed
+}
+
+enum DeviceStatus {
+  online
+  offline
+}
+
+enum UserRole {
+  staff
+  intern
+  nysc
+  trainee
+  admin
+  contractor
+  visitor
+}
+
+model User {
+  id                   String          @id @default(cuid())
+  userId               String          @unique // Format: BTL/25/11/13 (year/month/serial)
+  firstName            String
+  lastName             String
+  email                String          @unique
+  phoneNumber          String?
+  employeeId           String?         @unique
+  profilePicture       ProfilePicture?
+  status               UserStatus      @default(active)
+  role                 UserRole        @default(staff)
+  department           String?
+  accessLevel          Int             @default(1) // Access level number
+  allowedAccessMethods AccessMethod[] // Array of allowed methods: [rfid, fingerprint, keypad]
+  keypadPin            String? // PIN for keypad access (hashed)
+  lastAccessAt         DateTime?
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+
+  // Relationships
+  rfidTags       RfidTag[]
+  fingerprintIds FingerprintId[]
+  accessLogs     AccessLog[]
+
+  @@index([status])
+  @@index([role])
+  @@index([department])
+  @@index([email])
+  @@index([userId])
+  @@index([accessLevel])
+  @@map("users")
+}
+
+model ProfilePicture {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  secureUrl String // Secure URL from cloud storage
+  publicId  String // Public ID from cloud storage (e.g., Cloudinary)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("profile_pictures")
+}
+
+model RfidTag {
+  id        String   @id @default(cuid())
+  tag       String // RFID tag value like "0xA1B2C3D4"
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([tag, userId])
+  @@index([tag])
+  @@index([userId])
+  @@map("rfid_tags")
+}
+
+model FingerprintId {
+  id            String   @id @default(cuid())
+  fingerprintId Int // Fingerprint ID from device (1, 2, etc.)
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now())
+
+  @@unique([fingerprintId, userId])
+  @@index([fingerprintId])
+  @@index([userId])
+  @@map("fingerprint_ids")
+}
+
+model Device {
+  id              String       @id @default(cuid())
+  deviceId        String       @unique // Custom device ID like "DOOR-001"
+  name            String
+  location        String
+  status          DeviceStatus @default(offline)
+  firmwareVersion String?
+  lastSeen        DateTime?
+  settings        Json? // DeviceSettings: { autoLockDelay, volume, ledBrightness }
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  // Relationships
+  accessLogs AccessLog[]
+
+  @@index([status])
+  @@index([deviceId])
+  @@map("devices")
+}
+
+model AccessLog {
+  id            String       @id @default(cuid())
+  logId         String       @unique // Custom log ID like "LOG-10045"
+  userId        String
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceId      String
+  device        Device       @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  method        AccessMethod
+  rfidUid       String?
+  fingerprintId Int?
+  keypadPin     String? // PIN used for keypad access (if method is keypad)
+  status        AccessStatus
+  message       String?
+  timestamp     DateTime     @default(now())
+
+  @@index([userId])
+  @@index([deviceId])
+  @@index([status])
+  @@index([method])
+  @@index([timestamp])
+  @@map("access_logs")
+}
