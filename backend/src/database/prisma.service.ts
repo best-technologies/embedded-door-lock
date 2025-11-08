@@ -10,9 +10,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     private readonly logger: LoggerService,
   ) {
     super({
-      log: configService.isDevelopment
-        ? ['query', 'info', 'warn', 'error']
-        : ['error'],
+      log: ['error', 'warn'],
       errorFormat: 'pretty',
     });
   }

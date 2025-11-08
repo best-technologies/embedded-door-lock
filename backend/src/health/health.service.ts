@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { LoggerService } from '../common/logger/logger.service';
+import { HealthResponseDto } from './dto/health-response.dto';
 
 @Injectable()
 export class HealthService {
@@ -9,8 +10,8 @@ export class HealthService {
     private readonly logger: LoggerService,
   ) {}
 
-  async getHealth() {
-    const health = {
+  async getHealth(): Promise<HealthResponseDto> {
+    const health: HealthResponseDto = {
       status: 'ok',
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),

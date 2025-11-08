@@ -42,13 +42,19 @@ enum UserRole {
   visitor
 }
 
+enum Gender {
+  M
+  F
+}
+
 model User {
   id                   String          @id @default(cuid())
-  userId               String          @unique // Format: BTL/25/11/13 (year/month/serial)
+  userId               String          @unique // Format: BTL-25-11-13 (year-month-serial)
   firstName            String
   lastName             String
   email                String          @unique
   phoneNumber          String?
+  gender               Gender?
   employeeId           String?         @unique
   profilePicture       ProfilePicture?
   status               UserStatus      @default(active)
@@ -68,6 +74,7 @@ model User {
 
   @@index([status])
   @@index([role])
+  @@index([role, createdAt]) // Composite index for efficient userId generation
   @@index([department])
   @@index([email])
   @@index([userId])

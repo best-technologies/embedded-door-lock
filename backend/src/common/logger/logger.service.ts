@@ -38,40 +38,40 @@ export class LoggerService implements NestLoggerService {
       let levelStr: string;
       switch (normalizedLevel) {
         case 'error':
-          levelStr = chalk.red.bold('ERROR');
+          levelStr = chalk.red.bold('❌ ERROR');
           break;
         case 'warn':
-          levelStr = chalk.yellow.bold('WARN');
+          levelStr = chalk.yellow.bold('⚠️  WARN');
           break;
         case 'success':
-          levelStr = chalk.green.bold('SUCCESS');
+          levelStr = chalk.green.bold('✅ SUCCESS');
           break;
         case 'info':
-          levelStr = chalk.blue.bold('INFO');
+          levelStr = chalk.blue.bold('ℹ️  INFO');
           break;
         case 'debug':
-          levelStr = chalk.magenta.bold('DEBUG');
+          levelStr = chalk.magenta.bold('🔍 DEBUG');
           break;
         case 'verbose':
-          levelStr = chalk.cyan.bold('VERBOSE');
+          levelStr = chalk.cyan.bold('📝 VERBOSE');
           break;
         case 'http':
-          levelStr = chalk.blueBright.bold('HTTP');
+          levelStr = chalk.blueBright.bold('🌐 HTTP');
           break;
         case 'database':
-          levelStr = chalk.cyanBright.bold('DATABASE');
+          levelStr = chalk.cyanBright.bold('💾 DATABASE');
           break;
         case 'api':
-          levelStr = chalk.blueBright.bold('API');
+          levelStr = chalk.blueBright.bold('🔌 API');
           break;
         case 'security':
-          levelStr = chalk.redBright.bold('SECURITY');
+          levelStr = chalk.redBright.bold('🔒 SECURITY');
           break;
         case 'performance':
-          levelStr = chalk.yellowBright.bold('PERFORMANCE');
+          levelStr = chalk.yellowBright.bold('⚡ PERFORMANCE');
           break;
         default:
-          levelStr = chalk.white.bold(normalizedLevel.toUpperCase());
+          levelStr = chalk.white.bold(`📌 ${normalizedLevel.toUpperCase()}`);
       }
 
       // Extract additional metadata

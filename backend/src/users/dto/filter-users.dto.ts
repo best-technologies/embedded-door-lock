@@ -1,18 +1,33 @@
 import { IsOptional, IsString, IsEnum, IsInt, Min, Max } from 'class-validator';
 import { Type } from 'class-transformer';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { PaginationDto } from '../../common/dto/pagination.dto';
+import { UserStatus, UserRole } from '@prisma/client';
 
 export class FilterUsersDto extends PaginationDto {
+  @ApiPropertyOptional({
+    description: 'Filter by user status',
+    enum: UserStatus,
+    example: UserStatus.active,
+  })
   @IsOptional()
-  @IsEnum(['active', 'suspended', 'terminated'])
-  status?: 'active' | 'suspended' | 'terminated';
+  @IsEnum(UserStatus)
+  status?: UserStatus;
 
+  @ApiPropertyOptional({
+    description: 'Filter by user role',
+    enum: UserRole,
+    example: UserRole.staff,
+  })
   @IsOptional()
-  @IsString()
-  role?: string;
+  @IsEnum(UserRole)
+  role?: UserRole;
 
+  @ApiPropertyOptional({
+    description: 'Filter by department',
+    example: 'Engineering',
+  })
   @IsOptional()
   @IsString()
   department?: string;
 }
-
