@@ -7,6 +7,7 @@ import { AccessModule } from './access/access.module';
 import { DevicesModule } from './devices/devices.module';
 import { SyncModule } from './sync/sync.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { LoggerModule } from './common/logger/logger.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
       isGlobal: true,
       envFilePath: '.env',
     }),
+    LoggerModule,
     UsersModule,
     AccessModule,
     DevicesModule,
