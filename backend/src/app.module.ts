@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
@@ -8,14 +7,16 @@ import { DevicesModule } from './devices/devices.module';
 import { SyncModule } from './sync/sync.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { LoggerModule } from './common/logger/logger.module';
+import { AppConfigModule } from './config/config.module';
+import { DatabaseModule } from './database/database.module';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-      envFilePath: '.env',
-    }),
+    AppConfigModule,
     LoggerModule,
+    DatabaseModule,
+    HealthModule,
     UsersModule,
     AccessModule,
     DevicesModule,
