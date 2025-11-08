@@ -1,4 +1,8 @@
-# ESP32 Door Lock System - Complete Testing Guide
+# ESP8266/ESP32 Door Lock System - Complete Testing Guide
+
+**⚠️ IMPORTANT: Check your board type first!**
+
+If you see the error "This chip is ESP8266, not ESP32", you have an **ESP8266** board, not ESP32. This guide works for both, but you need to select the correct board in Arduino IDE.
 
 ## 📌 Your ESP32 Pin Layout
 
@@ -143,6 +147,46 @@ Follow these phases in order. Test each phase before moving to the next.
 **Connections:** None needed - just upload and check Serial Monitor.
 
 **Code:**
+
+**For ESP8266 (NodeMCU):**
+```cpp
+// PHASE 1: Basic ESP8266 Test
+// Upload this and open Serial Monitor at 115200 baud
+
+void setup() {
+  Serial.begin(115200);
+  delay(1000);
+  
+  Serial.println("=================================");
+  Serial.println("ESP8266 Door Lock System - Test");
+  Serial.println("=================================");
+  Serial.println("ESP8266 is running!");
+  Serial.print("Chip ID: ");
+  Serial.println(ESP.getChipId());
+  Serial.print("CPU Frequency: ");
+  Serial.print(ESP.getCpuFreqMHz());
+  Serial.println(" MHz");
+  Serial.print("Free Heap: ");
+  Serial.print(ESP.getFreeHeap());
+  Serial.println(" bytes");
+  Serial.print("Flash Size: ");
+  Serial.print(ESP.getFlashChipSize() / 1024 / 1024);
+  Serial.println(" MB");
+  Serial.print("Flash Chip ID: ");
+  Serial.println(ESP.getFlashChipId());
+  Serial.print("SDK Version: ");
+  Serial.println(ESP.getSdkVersion());
+  Serial.println("=================================");
+  Serial.println("If you see this, ESP8266 is working!");
+}
+
+void loop() {
+  Serial.println("ESP8266 is alive! Time: " + String(millis() / 1000) + " seconds");
+  delay(2000);
+}
+```
+
+**For ESP32 (if you have ESP32):**
 ```cpp
 // PHASE 1: Basic ESP32 Test
 // Upload this and open Serial Monitor at 115200 baud
@@ -191,46 +235,108 @@ void loop() {
 **Purpose:** Test the LCD display.
 
 **Connections:**
-- LCD VCC → ESP32 3V
-- LCD GND → ESP32 G
-- LCD SDA → ESP32 D7 (GPIO 13)
-- LCD SCL → ESP32 D6 (GPIO 12)
+- LCD VCC → ESP8266 3V
+- LCD GND → ESP8266 G
+- LCD SDA → ESP8266 D7 (GPIO 13)
+- LCD SCL → ESP8266 D6 (GPIO 12)
 
-**Code:**
+**⚠️ IMPORTANT: First, run the I2C Scanner below to find your LCD address!**
+
+**I2C Scanner Code (Run This First!):**
 ```cpp
-// PHASE 2: LCD Test (4-Pin I2C)
+// I2C SCANNER - Find your LCD address
 #include <Wire.h>
-#include <LiquidCrystal_I2C.h>
 
-// I2C pins
 #define I2C_SDA 13  // D7
 #define I2C_SCL 12  // D6
 
-// LCD address - try 0x27 first, if not working try 0x3F
+void setup() {
+  Serial.begin(115200);
+  delay(2000);
+  
+  Wire.begin(I2C_SDA, I2C_SCL);
+  
+  Serial.println("\nI2C Scanner");
+  Serial.println("Scanning for I2C devices...");
+  Serial.print("SDA pin: ");
+  Serial.println(I2C_SDA);
+  Serial.print("SCL pin: ");
+  Serial.println(I2C_SCL);
+  Serial.println();
+  
+  byte count = 0;
+  for (byte i = 8; i < 120; i++) {
+    Wire.beginTransmission(i);
+    if (Wire.endTransmission() == 0) {
+      Serial.print("Found I2C device at address 0x");
+      if (i < 16) Serial.print("0");
+      Serial.println(i, HEX);
+      count++;
+      delay(10);
+    }
+  }
+  
+  if (count == 0) {
+    Serial.println("No I2C devices found!");
+    Serial.println("Check your connections:");
+    Serial.println("- LCD SDA → ESP8266 D7 (GPIO 13)");
+    Serial.println("- LCD SCL → ESP8266 D6 (GPIO 12)");
+    Serial.println("- LCD VCC → ESP8266 3V");
+    Serial.println("- LCD GND → ESP8266 G");
+  } else {
+    Serial.print("Found ");
+    Serial.print(count);
+    Serial.println(" device(s).");
+    Serial.println("Use this address in your LCD code!");
+  }
+}
+
+void loop() {}
+```
+
+**After finding the address, use this LCD test code:**
+```cpp
+// PHASE 2: LCD Test (4-Pin I2C) - ESP8266 Version
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+// I2C pins for ESP8266
+#define I2C_SDA 13  // D7 (GPIO 13)
+#define I2C_SCL 12  // D6 (GPIO 12)
+
+// ⚠️ CHANGE THIS ADDRESS based on I2C scanner results!
+// Common addresses: 0x27 or 0x3F
 LiquidCrystal_I2C lcd(0x27, 16, 2); // Address, columns, rows
 
 void setup() {
   Serial.begin(115200);
-  delay(1000);
+  delay(2000);  // Wait for serial and boot
   
   Serial.println("Initializing LCD...");
+  Serial.print("I2C SDA: GPIO ");
+  Serial.println(I2C_SDA);
+  Serial.print("I2C SCL: GPIO ");
+  Serial.println(I2C_SCL);
   
-  // Initialize I2C with custom pins
+  // Initialize I2C with custom pins (ESP8266)
   Wire.begin(I2C_SDA, I2C_SCL);
+  delay(100);
   
   // Initialize LCD
   lcd.init();
+  delay(100);
   lcd.backlight();
+  delay(100);
   
-  // Display startup message
+  // Test display
   lcd.setCursor(0, 0);
-  lcd.print("ESP32 Door Lock");
+  lcd.print("ESP8266 Test");
   lcd.setCursor(0, 1);
-  lcd.print("LCD Test OK!");
+  lcd.print("LCD Working!");
   
   Serial.println("LCD initialized!");
   Serial.println("If you see text on LCD, it's working!");
-  delay(2000);
+  delay(3000);
   
   lcd.clear();
 }
@@ -250,10 +356,32 @@ void loop() {
 }
 ```
 
-**Troubleshooting:**
-- If LCD doesn't show anything, try address 0x3F instead of 0x27
-- Check connections (SDA to D7, SCL to D6)
-- Make sure LCD has power (VCC to 3V)
+**Troubleshooting Steps:**
+
+1. **Run I2C Scanner First!**
+   - Upload the I2C scanner code above
+   - Check Serial Monitor for the LCD address
+   - Common addresses: 0x27 or 0x3F
+
+2. **If Scanner Finds Nothing:**
+   - Check connections:
+     - LCD SDA → ESP8266 D7 (GPIO 13)
+     - LCD SCL → ESP8266 D6 (GPIO 12)
+     - LCD VCC → ESP8266 3V (NOT 5V!)
+     - LCD GND → ESP8266 G
+   - Try different I2C pins (ESP8266 default: GPIO 4=SDA, GPIO 5=SCL)
+   - Check if LCD has power LED (should light up)
+
+3. **If Scanner Finds Address but LCD Still Blank:**
+   - Update the address in LCD code (0x27 or 0x3F)
+   - Try adjusting LCD contrast (some modules have a potentiometer)
+   - Make sure `lcd.backlight()` is called
+   - Try `lcd.setBacklight(HIGH)` instead
+
+4. **ESP8266 Specific:**
+   - ESP8266 I2C can be finicky - try adding delays
+   - Some LCD modules need 5V on VCC (check your LCD specs)
+   - If using 5V LCD, you may need a level shifter for SDA/SCL
 
 **✅ Success:** If you see text on LCD, it's working!
 
@@ -1328,16 +1456,23 @@ For now, the system will log all access attempts to `/api/v1/access/logs` but wo
 
 4. **Select Correct Board (IMPORTANT!)**
    
-   **⚠️ Your board is NOT "Arduino Nano ESP32"!**
+   **First, identify your board:**
+   - If you see error "This chip is ESP8266, not ESP32" → You have **ESP8266**
+   - If upload works with ESP32 → You have **ESP32**
    
-   Based on your pin layout (D0-D8, A0), you likely have:
-   - **ESP32 DevKit** or
-   - **NodeMCU-32S** or  
-   - **ESP32-WROOM-32 DevKit**
+   **For ESP8266 (NodeMCU style with D0-D8 labels):**
+   - Tools → Board → **ESP8266 Boards** → **NodeMCU 1.0 (ESP-12E Module)**
    
-   **Correct Board Selection:**
+   **If you don't see ESP8266 boards:**
+   1. File → Preferences → Additional Board Manager URLs
+   2. Add: `http://arduino.esp8266.com/stable/package_esp8266com_index.json`
+   3. Tools → Board → Boards Manager
+   4. Search "ESP8266" → Install "esp8266 by ESP8266 Community"
+   5. Wait for installation to complete
+   6. Then select: Tools → Board → **NodeMCU 1.0 (ESP-12E Module)**
+   
+   **For ESP32 (if you have ESP32, not ESP8266):**
    - Tools → Board → **ESP32 Arduino** → **ESP32 Dev Module**
-   - OR: Tools → Board → **ESP32 Arduino** → **NodeMCU-32S** (if available)
    
    **If you don't see ESP32 boards:**
    1. File → Preferences → Additional Board Manager URLs
@@ -1348,9 +1483,18 @@ For now, the system will log all access attempts to `/api/v1/access/logs` but wo
    6. Then select: Tools → Board → **ESP32 Dev Module**
 
 5. **Upload Settings**
-   - Tools → Board → **ESP32 Dev Module** (NOT Arduino Nano ESP32!)
+   
+   **For ESP8266:**
+   - Tools → Board → **NodeMCU 1.0 (ESP-12E Module)**
+   - Tools → Upload Speed → **115200**
+   - Tools → CPU Frequency → **80MHz** or **160MHz**
+   - Tools → Flash Size → **4MB (FS:2MB OTA:~1019KB)**
+   - Tools → Port → Select your port
+   
+   **For ESP32:**
+   - Tools → Board → **ESP32 Dev Module**
    - Tools → Upload Speed → **115200** (or 921600 if 115200 is too slow)
-   - Tools → Port → Select your ESP32 port (e.g., /dev/cu.usbserial-xxx on Mac, COMx on Windows)
+   - Tools → Port → Select your ESP32 port
    - Tools → CPU Frequency → **240MHz (WiFi/BT)**
    - Tools → Flash Frequency → **80MHz**
    - Tools → Flash Size → **4MB (32Mb)**

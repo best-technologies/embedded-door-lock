@@ -218,9 +218,131 @@ Supports filtering by status, department, role, or date range.
 
 ---
 
+## Access Verification
+
+### 8. POST /access/verify-rfid
+
+**Description:** Verify an RFID tag and return user information if the tag is registered and authorized. This endpoint is called by the ESP8266/ESP32 device when an RFID card is scanned.
+
+**Request Body:**
+```json
+{
+  "rfidTag": "0xA1B2C3D4",
+  "deviceId": "DOOR-001"
+}
+```
+
+**Request Parameters:**
+- `rfidTag` (required) - RFID tag value (e.g., "0xA1B2C3D4" or "A1B2C3D4")
+- `deviceId` (optional) - Device ID making the request
+
+**Response (Authorized):**
+```json
+{
+  "success": true,
+  "message": "RFID tag verified successfully",
+  "data": {
+    "authorized": true,
+    "user": {
+      "userId": "BTL-25-11-13",
+      "firstName": "John",
+      "lastName": "Doe",
+      "email": "john.doe@example.com",
+      "status": "active",
+      "role": "staff",
+      "department": "Engineering",
+      "allowedAccessMethods": ["rfid", "keypad"],
+      "rfidTags": ["A1B2C3D4"],
+      "fingerprintIds": [1, 2]
+    }
+  }
+}
+```
+
+**Response (Not Authorized):**
+```json
+{
+  "success": true,
+  "message": "RFID tag verification failed",
+  "data": {
+    "authorized": false,
+    "user": null,
+    "reason": "RFID tag not registered"
+  }
+}
+```
+
+**Possible Reasons for Failure:**
+- `"RFID tag not registered"` - Tag not found in database
+- `"User account is suspended"` - User account is not active
+- `"RFID access method not enabled for this user"` - User doesn't have RFID access enabled
+
+---
+
+### 9. POST /access/verify-fingerprint
+
+**Description:** Verify a fingerprint ID and return user information if the fingerprint is registered and authorized. This endpoint is called by the ESP8266/ESP32 device when a fingerprint is scanned.
+
+**Request Body:**
+```json
+{
+  "fingerprintId": 1,
+  "deviceId": "DOOR-001"
+}
+```
+
+**Request Parameters:**
+- `fingerprintId` (required) - Fingerprint ID from the device (integer, minimum: 1)
+- `deviceId` (optional) - Device ID making the request
+
+**Response (Authorized):**
+```json
+{
+  "success": true,
+  "message": "Fingerprint ID verified successfully",
+  "data": {
+    "authorized": true,
+    "user": {
+      "userId": "BTL-25-11-13",
+      "firstName": "John",
+      "lastName": "Doe",
+      "email": "john.doe@example.com",
+      "status": "active",
+      "role": "staff",
+      "department": "Engineering",
+      "allowedAccessMethods": ["fingerprint", "rfid"],
+      "rfidTags": ["A1B2C3D4"],
+      "fingerprintIds": [1, 2]
+    }
+  }
+}
+```
+
+**Response (Not Authorized):**
+```json
+{
+  "success": true,
+  "message": "Fingerprint ID verification failed",
+  "data": {
+    "authorized": false,
+    "user": null,
+    "reason": "Fingerprint ID not registered"
+  }
+}
+```
+
+**Possible Reasons for Failure:**
+- `"Fingerprint ID not registered"` - Fingerprint ID not found in database
+- `"User account is suspended"` - User account is not active
+- `"Fingerprint access method not enabled for this user"` - User doesn't have fingerprint access enabled
+
+**Note:** Both verification endpoints return HTTP 200 status code regardless of authorization result. Check the `authorized` field in the response to determine if access should be granted.
+
+---
+
 ## Device Operations
 
-### 8. GET /devices
+### 10. GET /devices
 
 **Description:** List all door controller devices registered in the system.
 
@@ -239,7 +361,7 @@ Supports filtering by status, department, role, or date range.
 
 ---
 
-### 9. GET /devices/:deviceId
+### 11. GET /devices/:deviceId
 
 **Description:** Get single device details and configuration (door name, lock delay, network info).
 
@@ -261,7 +383,7 @@ Supports filtering by status, department, role, or date range.
 
 ---
 
-### 10. PATCH /devices/:deviceId/settings
+### 12. PATCH /devices/:deviceId/settings
 
 **Description:** Update door device configuration from the backend (optional).
 
@@ -286,7 +408,7 @@ Supports filtering by status, department, role, or date range.
 
 ## General / Monitoring
 
-### 11. GET /dashboard/summary
+### 13. GET /dashboard/summary
 
 **Description:** Return summarized stats (total users, devices online/offline, today's access count).
 
