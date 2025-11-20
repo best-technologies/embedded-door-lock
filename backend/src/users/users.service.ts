@@ -55,9 +55,16 @@ export class UsersService {
         'UsersService',
       );
 
+      // Transform response to return simple arrays for rfidTags and fingerprintIds
+      const transformedUsers = users.map((user) => ({
+        ...user,
+        rfidTags: user.rfidTags.map((tag) => tag.tag),
+        fingerprintIds: user.fingerprintIds.map((fp) => fp.fingerprintId),
+      }));
+
       return ResponseHelper.paginated(
         'Users retrieved successfully',
-        users,
+        transformedUsers,
         total,
         page,
         limit,
@@ -92,7 +99,14 @@ export class UsersService {
 
       this.logger.success(`Successfully fetched user: ${userId}`, 'UsersService');
 
-      return ResponseHelper.success('User retrieved successfully', user);
+      // Transform response to return simple arrays for rfidTags and fingerprintIds
+      const transformedUser = {
+        ...user,
+        rfidTags: user.rfidTags.map((tag) => tag.tag),
+        fingerprintIds: user.fingerprintIds.map((fp) => fp.fingerprintId),
+      };
+
+      return ResponseHelper.success('User retrieved successfully', transformedUser);
     } catch (error: any) {
       if (error instanceof NotFoundException) {
         throw error;
