@@ -500,5 +500,72 @@ export class UsersService {
       throw error;
     }
   }
+
+  /**
+   * Generate a temporary 6-digit access code for a user
+   * Code expires after specified duration (default: 1 hour)
+   * Code is single-use and gets deleted after use
+   */
+  async generate2FACode(userId: string, expiresInMinutes: number = 60) {
+    try {
+      this.logger.info(
+        `Generating temporary access code for user: ${userId}`,
+        'UsersService',
+      );
+
+      // Verify user exists
+      const user = await this.prisma.user.findUniqueOrThrow({
+        where: { userId },
+        select: { id: true, userId: true, firstName: true, lastName: true },
+      });
+
+      // Generate random 6-digit code
+      const code = String(Math.floor(100000 + Math.random() * 900000));
+
+      // Calculate expiration time
+      const expiresAt = new Date();
+      expiresAt.setMinutes(expiresAt.getMinutes() + expiresInMinutes);
+
+      // Delete any existing unused codes for this user
+      await this.prisma.temporaryAccessCode.deleteMany({
+        where: {
+          userId: user.id,
+          used: false,
+        },
+      });
+
+      // Create new temporary code
+      const temporaryCode = await this.prisma.temporaryAccessCode.create({
+        data: {
+          code,
+          userId: user.id,
+          expiresAt,
+        },
+      });
+
+      this.logger.success(
+        `Temporary access code generated for user: ${userId} (expires in ${expiresInMinutes} minutes)`,
+        'UsersService',
+      );
+
+      return ResponseHelper.success('Temporary access code generated successfully', {
+        code,
+        userId: user.userId,
+        expiresAt: temporaryCode.expiresAt,
+        expiresInMinutes,
+      });
+    } catch (error: any) {
+      if (error.code === 'P2025') {
+        this.logger.warn(`User not found: ${userId}`, 'UsersService');
+        throw new NotFoundException(`User with ID ${userId} not found`);
+      }
+      this.logger.error(
+        `Failed to generate temporary access code for user ${userId}: ${error?.message || 'Unknown error'}`,
+        error?.stack,
+        'UsersService',
+      );
+      throw error;
+    }
+  }
 }
 

@@ -28,6 +28,7 @@ import { PaginatedUsersResponseDto } from './dto/paginated-users-response.dto';
 import { AddRfidTagDto } from './dto/add-rfid-tag.dto';
 import { RegisterFingerprintDto } from './dto/register-fingerprint.dto';
 import { SetKeypadPinDto } from './dto/set-keypad-pin.dto';
+import { GenerateTemporaryCodeDto } from './dto/generate-temporary-code.dto';
 
 @ApiTags('Users')
 @Controller('users')
@@ -292,6 +293,52 @@ export class UsersController {
     @Body() setKeypadPinDto: SetKeypadPinDto,
   ) {
     return this.usersService.setKeypadPin(userId, setKeypadPinDto.pin);
+  }
+
+  @Post(':userId/temporary-code')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Generate temporary access code',
+    description: 'Generate a 6-digit temporary access code for a user. Code expires after specified time and is single-use.',
+  })
+  @ApiParam({
+    name: 'userId',
+    description: 'User ID in format BTL-YY-MM-SS',
+    example: 'BTL-25-11-13',
+  })
+  @ApiBody({ type: GenerateTemporaryCodeDto })
+  @ApiResponse({
+    status: 201,
+    description: 'Temporary access code generated successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        message: { type: 'string' },
+        data: {
+          type: 'object',
+          properties: {
+            code: { type: 'string', example: '123456' },
+            userId: { type: 'string' },
+            expiresAt: { type: 'string', format: 'date-time' },
+            expiresInMinutes: { type: 'number' },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found',
+  })
+  async generateTemporaryCode(
+    @Param('userId') userId: string,
+    @Body() generateCodeDto: GenerateTemporaryCodeDto,
+  ) {
+    return this.usersService.generate2FACode(
+      userId,
+      generateCodeDto.expiresInMinutes || 60,
+    );
   }
 }
 

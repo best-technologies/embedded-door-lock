@@ -4,13 +4,13 @@ import { CreateAccessLogDto } from './dto/create-access-log.dto';
 import { FilterAccessLogsDto } from './dto/filter-access-logs.dto';
 import { VerifyRfidDto } from './dto/verify-rfid.dto';
 import { VerifyFingerprintDto } from './dto/verify-fingerprint.dto';
+import { VerifyTemporaryCodeDto } from './dto/verify-temporary-code.dto';
 import { AccessLog } from '../common/entities/access-log.entity';
 import { LoggerService } from '../common/logger/logger.service';
 import { ResponseHelper } from '../common/helpers/response.helper';
 
 @Injectable()
 export class AccessService {
-  // TODO: Replace with actual database implementation
   private accessLogs: AccessLog[] = [];
 
   constructor(
@@ -29,21 +29,21 @@ export class AccessService {
         'AccessService',
       );
 
-      const newLog: AccessLog = {
-        logId: `LOG-${Date.now()}`,
-        userId: createAccessLogDto.userId,
-        deviceId: createAccessLogDto.deviceId,
-        method: createAccessLogDto.method,
-        rfidUid: createAccessLogDto.rfidUid,
-        fingerprintId: createAccessLogDto.fingerprintId,
-        status: createAccessLogDto.status,
-        message: createAccessLogDto.status === 'success' ? 'Access granted' : 'Unauthorized',
-        timestamp: createAccessLogDto.timestamp
-          ? new Date(createAccessLogDto.timestamp)
-          : new Date(),
-      };
+    const newLog: AccessLog = {
+      logId: `LOG-${Date.now()}`,
+      userId: createAccessLogDto.userId,
+      deviceId: createAccessLogDto.deviceId,
+      method: createAccessLogDto.method,
+      rfidUid: createAccessLogDto.rfidUid,
+      fingerprintId: createAccessLogDto.fingerprintId,
+      status: createAccessLogDto.status,
+      message: createAccessLogDto.status === 'success' ? 'Access granted' : 'Unauthorized',
+      timestamp: createAccessLogDto.timestamp
+        ? new Date(createAccessLogDto.timestamp)
+        : new Date(),
+    };
 
-      this.accessLogs.push(newLog);
+    this.accessLogs.push(newLog);
 
       this.logger.success(
         `Access log created successfully: ${newLog.logId} (${createAccessLogDto.status})`,
@@ -51,7 +51,7 @@ export class AccessService {
       );
 
       return ResponseHelper.success('Access log created successfully', {
-        logId: newLog.logId,
+      logId: newLog.logId,
         status: createAccessLogDto.status,
         timestamp: newLog.timestamp,
       });
@@ -72,25 +72,25 @@ export class AccessService {
         'AccessService',
       );
 
-      let filtered = [...this.accessLogs];
+    let filtered = [...this.accessLogs];
 
-      if (filterDto.deviceId) {
-        filtered = filtered.filter((log) => log.deviceId === filterDto.deviceId);
-      }
+    if (filterDto.deviceId) {
+      filtered = filtered.filter((log) => log.deviceId === filterDto.deviceId);
+    }
 
-      if (filterDto.userId) {
-        filtered = filtered.filter((log) => log.userId === filterDto.userId);
-      }
+    if (filterDto.userId) {
+      filtered = filtered.filter((log) => log.userId === filterDto.userId);
+    }
 
-      if (filterDto.status) {
-        filtered = filtered.filter((log) => log.status === filterDto.status);
-      }
+    if (filterDto.status) {
+      filtered = filtered.filter((log) => log.status === filterDto.status);
+    }
 
-      if (filterDto.method) {
-        filtered = filtered.filter((log) => log.method === filterDto.method);
-      }
+    if (filterDto.method) {
+      filtered = filtered.filter((log) => log.method === filterDto.method);
+    }
 
-      // TODO: Implement date filtering and pagination
+    // TODO: Implement date filtering and pagination
 
       this.logger.success(
         `Successfully fetched ${filtered.length} access log(s)`,
@@ -152,11 +152,15 @@ export class AccessService {
           `RFID tag not found in database: ${rfidTag} (normalized: ${normalizedTag})`,
           'AccessService',
         );
-        return ResponseHelper.success('RFID tag verification failed', {
-          authorized: false,
-          user: null,
-          reason: 'RFID tag not registered',
-        });
+        return ResponseHelper.verification(
+          'RFID tag not registered',
+          {
+            authorized: false,
+            user: null,
+            reason: 'RFID tag not registered',
+          },
+          false,
+        );
       }
 
       const user = rfidTagRecord.user;
@@ -172,11 +176,15 @@ export class AccessService {
           `RFID tag found but user account is ${user.status}: ${user.userId}`,
           'AccessService',
         );
-        return ResponseHelper.success('RFID tag verification failed', {
-          authorized: false,
-          user: null,
-          reason: `User account is ${user.status}`,
-        });
+        return ResponseHelper.verification(
+          `User account is ${user.status}`,
+          {
+            authorized: false,
+            user: null,
+            reason: `User account is ${user.status}`,
+          },
+          false,
+        );
       }
 
       // Check if user has RFID access method enabled
@@ -185,11 +193,15 @@ export class AccessService {
           `RFID tag found but user doesn't have RFID access method enabled: ${user.userId}`,
           'AccessService',
         );
-        return ResponseHelper.success('RFID tag verification failed', {
-          authorized: false,
-          user: null,
-          reason: 'RFID access method not enabled for this user',
-        });
+        return ResponseHelper.verification(
+          'RFID access method not enabled for this user',
+          {
+            authorized: false,
+            user: null,
+            reason: 'RFID access method not enabled for this user',
+          },
+          false,
+        );
       }
 
       this.logger.success(
@@ -197,21 +209,34 @@ export class AccessService {
         'AccessService',
       );
 
-      return ResponseHelper.success('RFID tag verified successfully', {
-        authorized: true,
-        user: {
-          userId: user.userId,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          email: user.email,
-          status: user.status,
-          role: user.role,
-          department: user.department,
-          allowedAccessMethods: user.allowedAccessMethods,
-          rfidTags: user.rfidTags.map((tag) => tag.tag),
-          fingerprintIds: user.fingerprintIds.map((fp) => fp.fingerprintId),
+      // Safely handle visitor users - they might not have RFID tags or fingerprints
+      const rfidTags = user.rfidTags && Array.isArray(user.rfidTags) 
+        ? user.rfidTags.map((tag) => tag.tag) 
+        : [];
+      
+      const fingerprintIds = user.fingerprintIds && Array.isArray(user.fingerprintIds)
+        ? user.fingerprintIds.map((fp) => fp.fingerprintId)
+        : [];
+
+      return ResponseHelper.verification(
+        'RFID tag verified successfully',
+        {
+          authorized: true,
+          user: {
+            userId: user.userId,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+            status: user.status,
+            role: user.role,
+            department: user.department || null,
+            allowedAccessMethods: user.allowedAccessMethods || [],
+            rfidTags,
+            fingerprintIds,
+          },
         },
-      });
+        true,
+      );
     } catch (error: any) {
       this.logger.error(
         `Failed to verify RFID tag ${verifyRfidDto.rfidTag}: ${error?.message || 'Unknown error'}`,
@@ -255,11 +280,15 @@ export class AccessService {
           `Fingerprint ID not found in database: ${fingerprintId}`,
           'AccessService',
         );
-        return ResponseHelper.success('Fingerprint ID verification failed', {
-          authorized: false,
-          user: null,
-          reason: 'Fingerprint ID not registered',
-        });
+        return ResponseHelper.verification(
+          'Fingerprint ID not registered',
+          {
+            authorized: false,
+            user: null,
+            reason: 'Fingerprint ID not registered',
+          },
+          false,
+        );
       }
 
       const user = fingerprintRecord.user;
@@ -275,11 +304,15 @@ export class AccessService {
           `Fingerprint ID found but user account is ${user.status}: ${user.userId}`,
           'AccessService',
         );
-        return ResponseHelper.success('Fingerprint ID verification failed', {
-          authorized: false,
-          user: null,
-          reason: `User account is ${user.status}`,
-        });
+        return ResponseHelper.verification(
+          `User account is ${user.status}`,
+          {
+            authorized: false,
+            user: null,
+            reason: `User account is ${user.status}`,
+          },
+          false,
+        );
       }
 
       // Check if user has fingerprint access method enabled
@@ -288,11 +321,15 @@ export class AccessService {
           `Fingerprint ID found but user doesn't have fingerprint access method enabled: ${user.userId}`,
           'AccessService',
         );
-        return ResponseHelper.success('Fingerprint ID verification failed', {
-          authorized: false,
-          user: null,
-          reason: 'Fingerprint access method not enabled for this user',
-        });
+        return ResponseHelper.verification(
+          'Fingerprint access method not enabled for this user',
+          {
+            authorized: false,
+            user: null,
+            reason: 'Fingerprint access method not enabled for this user',
+          },
+          false,
+        );
       }
 
       this.logger.success(
@@ -300,24 +337,184 @@ export class AccessService {
         'AccessService',
       );
 
-      return ResponseHelper.success('Fingerprint ID verified successfully', {
-        authorized: true,
-        user: {
-          userId: user.userId,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          email: user.email,
-          status: user.status,
-          role: user.role,
-          department: user.department,
-          allowedAccessMethods: user.allowedAccessMethods,
-          rfidTags: user.rfidTags.map((tag) => tag.tag),
-          fingerprintIds: user.fingerprintIds.map((fp) => fp.fingerprintId),
+      // Safely handle visitor users - they might not have RFID tags or fingerprints
+      const rfidTags = user.rfidTags && Array.isArray(user.rfidTags) 
+        ? user.rfidTags.map((tag) => tag.tag) 
+        : [];
+      
+      const fingerprintIds = user.fingerprintIds && Array.isArray(user.fingerprintIds)
+        ? user.fingerprintIds.map((fp) => fp.fingerprintId)
+        : [];
+
+      return ResponseHelper.verification(
+        'Fingerprint ID verified successfully',
+        {
+          authorized: true,
+          user: {
+            userId: user.userId,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+            status: user.status,
+            role: user.role,
+            department: user.department || null,
+            allowedAccessMethods: user.allowedAccessMethods || [],
+            rfidTags,
+            fingerprintIds,
+          },
         },
-      });
+        true,
+      );
     } catch (error: any) {
       this.logger.error(
         `Failed to verify fingerprint ID ${verifyFingerprintDto.fingerprintId}: ${error?.message || 'Unknown error'}`,
+        error?.stack,
+        'AccessService',
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Verify temporary access code and return user if found
+   * Code is deleted after successful verification (single-use)
+   */
+  async verifyTemporaryCode(verifyTemporaryCodeDto: VerifyTemporaryCodeDto) {
+    try {
+      const { code, deviceId } = verifyTemporaryCodeDto;
+      
+      this.logger.info(
+        `Verifying temporary access code: ${code}${deviceId ? ` from device: ${deviceId}` : ''}`,
+        'AccessService',
+      );
+
+      // Find temporary code in database
+      const temporaryCode = await this.prisma.temporaryAccessCode.findUnique({
+        where: {
+          code,
+        },
+        include: {
+          user: {
+            include: {
+              rfidTags: true,
+              fingerprintIds: true,
+              profilePicture: true,
+            },
+          },
+        },
+      });
+
+      if (!temporaryCode) {
+        this.logger.warn(`Temporary access code not found: ${code}`, 'AccessService');
+        return ResponseHelper.verification(
+          'Invalid access code',
+          {
+            authorized: false,
+            user: null,
+            reason: 'Invalid access code',
+          },
+          false,
+        );
+      }
+
+      // Check if code has already been used
+      if (temporaryCode.used) {
+        this.logger.warn(
+          `Temporary access code already used: ${code}`,
+          'AccessService',
+        );
+        return ResponseHelper.verification(
+          'Access code has already been used',
+          {
+            authorized: false,
+            user: null,
+            reason: 'Access code has already been used',
+          },
+          false,
+        );
+      }
+
+      // Check if code has expired
+      if (new Date() > temporaryCode.expiresAt) {
+        this.logger.warn(
+          `Temporary access code expired: ${code}`,
+          'AccessService',
+        );
+        // Delete expired code
+        await this.prisma.temporaryAccessCode.delete({
+          where: { id: temporaryCode.id },
+        });
+        return ResponseHelper.verification(
+          'Access code has expired',
+          {
+            authorized: false,
+            user: null,
+            reason: 'Access code has expired',
+          },
+          false,
+        );
+      }
+
+      const user = temporaryCode.user;
+
+      // Check if user is active
+      if (user.status !== 'active') {
+        this.logger.warn(
+          `Temporary code found but user account is ${user.status}: ${user.userId}`,
+          'AccessService',
+        );
+        return ResponseHelper.verification(
+          `User account is ${user.status}`,
+          {
+            authorized: false,
+            user: null,
+            reason: `User account is ${user.status}`,
+          },
+          false,
+        );
+      }
+
+      // Mark code as used and delete it (single-use)
+      await this.prisma.temporaryAccessCode.delete({
+        where: { id: temporaryCode.id },
+      });
+
+      this.logger.success(
+        `Temporary access code verified and deleted for user: ${user.userId} (${user.firstName} ${user.lastName})`,
+        'AccessService',
+      );
+
+      // Safely handle visitor users - they might not have RFID tags or fingerprints
+      const rfidTags = user.rfidTags && Array.isArray(user.rfidTags) 
+        ? user.rfidTags.map((tag) => tag.tag) 
+        : [];
+      
+      const fingerprintIds = user.fingerprintIds && Array.isArray(user.fingerprintIds)
+        ? user.fingerprintIds.map((fp) => fp.fingerprintId)
+        : [];
+
+      return ResponseHelper.verification(
+        'Temporary access code verified successfully',
+        {
+          authorized: true,
+          user: {
+            userId: user.userId,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+            status: user.status,
+            role: user.role,
+            department: user.department || null,
+            allowedAccessMethods: user.allowedAccessMethods || [],
+            rfidTags,
+            fingerprintIds,
+          },
+        },
+        true,
+      );
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to verify temporary access code: ${error?.message || 'Unknown error'}`,
         error?.stack,
         'AccessService',
       );

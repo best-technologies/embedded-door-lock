@@ -71,6 +71,7 @@ model User {
   rfidTags       RfidTag[]
   fingerprintIds FingerprintId[]
   accessLogs     AccessLog[]
+  temporaryCodes TemporaryAccessCode[]
 
   @@index([status])
   @@index([role])
@@ -161,4 +162,21 @@ model AccessLog {
   @@index([method])
   @@index([timestamp])
   @@map("access_logs")
+}
+
+model TemporaryAccessCode {
+  id        String    @id @default(cuid())
+  code      String    @unique // 6-digit code
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime // Code expiration time
+  used      Boolean   @default(false) // Whether code has been used
+  usedAt    DateTime? // When code was used
+  createdAt DateTime  @default(now())
+
+  @@index([code])
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([used])
+  @@map("temporary_access_codes")
 }

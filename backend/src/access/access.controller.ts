@@ -18,6 +18,7 @@ import { CreateAccessLogDto } from './dto/create-access-log.dto';
 import { FilterAccessLogsDto } from './dto/filter-access-logs.dto';
 import { VerifyRfidDto } from './dto/verify-rfid.dto';
 import { VerifyFingerprintDto } from './dto/verify-fingerprint.dto';
+import { VerifyTemporaryCodeDto } from './dto/verify-temporary-code.dto';
 import { VerifyRfidResponseDto } from './dto/verify-rfid-response.dto';
 import { VerifyFingerprintResponseDto } from './dto/verify-fingerprint-response.dto';
 
@@ -156,6 +157,58 @@ export class AccessController {
   })
   verifyFingerprint(@Body() verifyFingerprintDto: VerifyFingerprintDto) {
     return this.accessService.verifyFingerprint(verifyFingerprintDto);
+  }
+
+  @Post('verify-temporary-code')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Verify temporary access code',
+    description: 'Check if a temporary 6-digit code is valid and return user information if found. Code is deleted after successful verification (single-use).',
+  })
+  @ApiBody({ type: VerifyTemporaryCodeDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Temporary code verification result - returns authorized: true with user data if valid, or authorized: false with reason if invalid',
+    type: VerifyRfidResponseDto, // Reuse same response structure
+    schema: {
+      example: {
+        success: true,
+        message: 'Temporary access code verified successfully',
+        data: {
+          authorized: true,
+          user: {
+            userId: 'BTL-25-11-13',
+            firstName: 'John',
+            lastName: 'Doe',
+            email: 'john.doe@example.com',
+            status: 'active',
+            role: 'visitor',
+            department: null,
+            allowedAccessMethods: ['keypad'],
+            rfidTags: [],
+            fingerprintIds: [],
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Temporary code verification failed - code not found, expired, or already used',
+    schema: {
+      example: {
+        success: true,
+        message: 'Temporary access code verification failed',
+        data: {
+          authorized: false,
+          user: null,
+          reason: 'Invalid access code',
+        },
+      },
+    },
+  })
+  verifyTemporaryCode(@Body() verifyTemporaryCodeDto: VerifyTemporaryCodeDto) {
+    return this.accessService.verifyTemporaryCode(verifyTemporaryCodeDto);
   }
 }
 

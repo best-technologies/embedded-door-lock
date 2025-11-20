@@ -9,6 +9,8 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     private readonly configService: AppConfigService,
     private readonly logger: LoggerService,
   ) {
+    // Prisma 6: Connection URL is read from DATABASE_URL env var automatically
+    // No need to pass it here - PrismaClient reads from environment
     super({
       log: ['error', 'warn'],
       errorFormat: 'pretty',

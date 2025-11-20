@@ -75,5 +75,25 @@ export class ResponseHelper {
       totalPages: Math.ceil(total / limit),
     };
   }
+
+  /**
+   * Create a verification response (for access verification endpoints)
+   * Returns data as object, not array, with proper success/error status
+   */
+  static verification<T extends { authorized: boolean }>(
+    message: string,
+    data: T,
+    authorized: boolean = true,
+  ): {
+    success: boolean;
+    message: string;
+    data: T;
+  } {
+    return {
+      success: authorized,
+      message,
+      data,
+    };
+  }
 }
 
