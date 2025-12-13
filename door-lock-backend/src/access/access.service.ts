@@ -269,6 +269,22 @@ export class AccessService {
         'AccessService',
       );
 
+      // Record attendance automatically (soft fail - doesn't block access)
+      if (this.attendanceService) {
+        try {
+          await this.attendanceService.recordAttendanceFromAccess(
+            user.id,
+            new Date(),
+          );
+        } catch (attendanceError: any) {
+          // Log attendance error but don't fail the verification
+          this.logger.warn(
+            `Failed to record attendance for user ${user.userId}: ${attendanceError?.message}`,
+            'AccessService',
+          );
+        }
+      }
+
       // Safely handle visitor users - they might not have RFID tags or fingerprints
       const rfidTags = user.rfidTags && Array.isArray(user.rfidTags) 
         ? user.rfidTags.map((tag) => tag.tag) 
@@ -396,6 +412,22 @@ export class AccessService {
         `Fingerprint ID verified successfully for user: ${user.userId} (${user.firstName} ${user.lastName})`,
         'AccessService',
       );
+
+      // Record attendance automatically (soft fail - doesn't block access)
+      if (this.attendanceService) {
+        try {
+          await this.attendanceService.recordAttendanceFromAccess(
+            user.id,
+            new Date(),
+          );
+        } catch (attendanceError: any) {
+          // Log attendance error but don't fail the verification
+          this.logger.warn(
+            `Failed to record attendance for user ${user.userId}: ${attendanceError?.message}`,
+            'AccessService',
+          );
+        }
+      }
 
       // Safely handle visitor users - they might not have RFID tags or fingerprints
       const rfidTags = user.rfidTags && Array.isArray(user.rfidTags) 
@@ -543,6 +575,22 @@ export class AccessService {
         `Temporary access code verified and deleted for user: ${user.userId} (${user.firstName} ${user.lastName})`,
         'AccessService',
       );
+
+      // Record attendance automatically (soft fail - doesn't block access)
+      if (this.attendanceService) {
+        try {
+          await this.attendanceService.recordAttendanceFromAccess(
+            user.id,
+            new Date(),
+          );
+        } catch (attendanceError: any) {
+          // Log attendance error but don't fail the verification
+          this.logger.warn(
+            `Failed to record attendance for user ${user.userId}: ${attendanceError?.message}`,
+            'AccessService',
+          );
+        }
+      }
 
       // Safely handle visitor users - they might not have RFID tags or fingerprints
       const rfidTags = user.rfidTags && Array.isArray(user.rfidTags) 
