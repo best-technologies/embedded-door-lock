@@ -101,5 +101,14 @@ export class AppConfigService {
   get workingDays(): string {
     return this.configService.get<string>('WORKING_DAYS', '1,2,3,4,5'); // Monday=1, Sunday=0
   }
+
+  // Checkout Time Window Configuration
+  get checkoutWindowStart(): string {
+    return this.configService.get<string>('CHECKOUT_WINDOW_START', '16:50'); // 4:50 PM
+  }
+
+  get checkoutWindowEnd(): string {
+    return this.configService.get<string>('CHECKOUT_WINDOW_END', '17:05'); // 5:05 PM
+  }
 }
 

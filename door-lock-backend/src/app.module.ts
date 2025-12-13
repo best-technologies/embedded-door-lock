@@ -12,6 +12,7 @@ import { DatabaseModule } from './database/database.module';
 import { HealthModule } from './health/health.module';
 import { IdentityModule } from './identity/identity.module';
 import { AttendanceModule } from './attendance/attendance.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { AttendanceModule } from './attendance/attendance.module';
     DevicesModule,
     SyncModule,
     DashboardModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [AppService],

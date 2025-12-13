@@ -158,7 +158,23 @@ export class AttendanceService {
   }
 
   /**
+   * Check if a timestamp is within the checkout window
+   */
+  private isWithinCheckoutWindow(timestamp: Date): boolean {
+    const windowStart = this.timeToMinutes(this.config.checkoutWindowStart);
+    const windowEnd = this.timeToMinutes(this.config.checkoutWindowEnd);
+    const accessMinutes = timestamp.getHours() * 60 + timestamp.getMinutes();
+
+    return accessMinutes >= windowStart && accessMinutes <= windowEnd;
+  }
+
+  /**
    * Record attendance from access log
+   * 
+   * Logic:
+   * - First access of the day = check-in time
+   * - Last access within checkout window (e.g., 4:50 PM - 5:05 PM) = check-out time
+   * - Accesses outside checkout window are ignored for checkout purposes
    */
   async recordAttendanceFromAccess(userId: string, timestamp: Date): Promise<void> {
     try {
@@ -167,6 +183,7 @@ export class AttendanceService {
 
       const isWorking = this.isWorkingDay(date);
       const holidayCheck = await this.isHoliday(date);
+      const isInCheckoutWindow = this.isWithinCheckoutWindow(timestamp);
 
       // Find existing attendance record for this date
       const existingAttendance = await this.prisma.attendance.findUnique({
@@ -183,15 +200,20 @@ export class AttendanceService {
         let checkIn = existingAttendance.checkIn;
         let checkOut = existingAttendance.checkOut;
 
-        // If this is the first access of the day or earlier than current check-in
+        // Check-in: First access of the day or earlier than current check-in
         if (!checkIn || timestamp < checkIn) {
           checkIn = timestamp;
         }
 
-        // If this is later than current check-out
-        if (!checkOut || timestamp > checkOut) {
-          checkOut = timestamp;
+        // Check-out: Only update if this access is within checkout window
+        // and is later than current check-out (or if no check-out exists yet)
+        if (isInCheckoutWindow) {
+          if (!checkOut || timestamp > checkOut) {
+            checkOut = timestamp;
+          }
         }
+        // If access is outside checkout window, don't update check-out
+        // This prevents mid-day exits from being recorded as check-out
 
         const statusCalc = this.calculateAttendanceStatus(
           checkIn,
@@ -216,9 +238,16 @@ export class AttendanceService {
         });
       } else {
         // Create new attendance record
+        // Check-in: This is the first access
+        const checkIn = timestamp;
+        
+        // Check-out: Only set if this access is within checkout window
+        // (unlikely for first access, but handles edge cases)
+        const checkOut = isInCheckoutWindow ? timestamp : null;
+
         const statusCalc = this.calculateAttendanceStatus(
-          timestamp,
-          null,
+          checkIn,
+          checkOut,
           isWorking,
           holidayCheck.isHoliday,
         );
@@ -228,8 +257,8 @@ export class AttendanceService {
             attendanceId: this.generateAttendanceId(userId, date),
             userId,
             date,
-            checkIn: timestamp,
-            checkOut: null,
+            checkIn,
+            checkOut,
             status: statusCalc.status,
             minutesLate: statusCalc.minutesLate,
             minutesEarly: statusCalc.minutesEarly,
@@ -242,7 +271,7 @@ export class AttendanceService {
       }
 
       this.logger.info(
-        `Attendance recorded for user ${userId} on ${date.toISOString().split('T')[0]}`,
+        `Attendance recorded for user ${userId} on ${date.toISOString().split('T')[0]} (${isInCheckoutWindow ? 'checkout window' : 'regular access'})`,
         'AttendanceService',
       );
     } catch (error: any) {

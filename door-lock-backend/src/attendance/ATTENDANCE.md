@@ -102,9 +102,56 @@ OFFICE_OPENING_TIME=08:00          # Default: 08:00
 OFFICE_CLOSING_TIME=17:00           # Default: 17:00
 LATE_THRESHOLD_MINUTES=15          # Default: 15 minutes
 
+# Checkout Window (Time range for valid checkout)
+CHECKOUT_WINDOW_START=16:50        # Default: 16:50 (4:50 PM)
+CHECKOUT_WINDOW_END=17:05          # Default: 17:05 (5:05 PM)
+
 # Working Days (1=Monday, 0=Sunday)
 WORKING_DAYS=1,2,3,4,5             # Default: Monday-Friday
 ```
+
+### Checkout Window
+
+The checkout window defines the time range during which door access is considered a valid checkout. This prevents mid-day exits (e.g., going out for lunch) from being recorded as the checkout time.
+
+- **CHECKOUT_WINDOW_START**: Start time of checkout window (default: 16:50 / 4:50 PM)
+- **CHECKOUT_WINDOW_END**: End time of checkout window (default: 17:05 / 5:05 PM)
+
+**How it works:**
+- First access of the day = Check-in time (regardless of time)
+- Last access within checkout window = Check-out time
+- Accesses outside checkout window are ignored for checkout purposes
+
+**Example Scenario:**
+```
+8:00 AM  - User enters → Check-in recorded
+9:00 AM  - User exits (lunch) → Ignored (outside checkout window)
+9:30 AM  - User returns → Ignored (outside checkout window)
+5:00 PM  - User exits → Check-out recorded (within checkout window)
+```
+
+### Checkout Window
+
+The checkout window defines the time range during which door access is considered a valid checkout. This prevents mid-day exits (e.g., going out for lunch, running errands) from being recorded as the checkout time.
+
+**How it works:**
+- **First access of the day** = Check-in time (regardless of time)
+- **Last access within checkout window** = Check-out time
+- Accesses outside checkout window are ignored for checkout purposes
+
+**Example Scenario:**
+```
+8:00 AM  - User enters → Check-in recorded (8:00 AM)
+9:00 AM  - User exits (lunch) → Ignored (outside checkout window)
+9:30 AM  - User returns → Ignored (outside checkout window)
+5:00 PM  - User exits → Check-out recorded (5:00 PM, within checkout window)
+```
+
+**Result:** Check-in: 8:00 AM, Check-out: 5:00 PM ✅
+
+Without checkout window, the system would incorrectly record:
+- Check-in: 8:00 AM
+- Check-out: 9:30 AM ❌ (wrong - this was the return from lunch)
 
 ### Working Days Format
 
@@ -451,6 +498,7 @@ The attendance service is injected into the access service using `forwardRef` to
 Uses `AppConfigService` for:
 - Office opening/closing times
 - Late threshold minutes
+- Checkout window (start and end times)
 - Working days configuration
 
 ## Best Practices

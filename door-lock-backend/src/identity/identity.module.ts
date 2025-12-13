@@ -34,5 +34,8 @@ import { EmailModule } from '../common/email/email.module';
   providers: [IdentityService, JwtStrategy],
   exports: [IdentityService, JwtModule, PassportModule],
 })
-export class IdentityModule {}
+export class IdentityModule {
+  // Guards and decorators are exported via their files
+  // They can be imported directly from their paths
+}
 
