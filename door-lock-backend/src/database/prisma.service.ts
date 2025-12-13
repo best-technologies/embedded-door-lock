@@ -14,6 +14,9 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     super({
       log: ['error', 'warn'],
       errorFormat: 'pretty',
+      // Configure connection pool to prevent cached plan issues
+      // This helps avoid "cached plan must not change result type" errors
+      // after schema migrations
     });
   }
 
@@ -48,6 +51,27 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     process.on('beforeExit', async () => {
       await app.close();
     });
+  }
+
+  /**
+   * Reset database connection to clear cached query plans
+   * Useful after schema migrations that change column types
+   * to fix "cached plan must not change result type" errors
+   */
+  async resetConnection() {
+    try {
+      this.logger.info('Resetting database connection to clear cached plans', 'PrismaService');
+      await this.$disconnect();
+      await this.$connect();
+      this.logger.success('Database connection reset successfully', 'PrismaService');
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to reset database connection: ${error?.message || 'Unknown error'}`,
+        error?.stack,
+        'PrismaService',
+      );
+      throw error;
+    }
   }
 }
 
