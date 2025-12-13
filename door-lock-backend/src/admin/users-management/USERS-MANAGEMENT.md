@@ -24,7 +24,102 @@ Authorization: Bearer <jwt-token>
 
 ## Endpoints
 
-### 1. Get All Users
+### 1. Enroll New User
+
+Create a new user account in the system. A unique userId and employeeId will be auto-generated. A secure password will be automatically generated and sent to the user via email along with their account details.
+
+**Endpoint**: `POST /api/v1/admin/users-management`
+
+**Notes**: 
+- A secure 12-character password is automatically generated and sent to the user via email. The user can use this password to sign in to the system.
+- A unique employeeId in format `EMP-XXX` (e.g., `EMP-001`, `EMP-002`) will be auto-generated if not provided. Employee IDs are sequential and unique.
+
+**Request Body:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `firstName` | string | Yes | First name of the user |
+| `lastName` | string | Yes | Last name of the user |
+| `email` | string | Yes | Email address (must be unique) |
+| `phoneNumber` | string | No | Phone number |
+| `gender` | enum | No | Gender: `M`, `F`, `OTHER` |
+| `employeeId` | string | No | Employee ID (if not provided, will be auto-generated in format EMP-XXX) |
+| `role` | enum | Yes | User role: `admin`, `staff`, `employee`, `nysc`, `intern` |
+| `department` | enum | No | Department |
+| `accessLevel` | number | No | Access level 1-10 (default: 1) |
+| `allowedAccessMethods` | array | Yes | Array of access methods: `rfid`, `fingerprint`, `keypad` |
+| `keypadPin` | string | No | Keypad PIN (will be hashed) |
+| `status` | enum | Yes | Account status: `active`, `inactive`, `suspended` |
+
+**Example Request:**
+```bash
+POST /api/v1/admin/users-management
+Content-Type: application/json
+Authorization: Bearer <jwt-token>
+
+{
+  "firstName": "John",
+  "lastName": "Doe",
+  "email": "john.doe@example.com",
+  "phoneNumber": "+2348012345678",
+  "gender": "M",
+  "role": "staff",
+  "department": "Engineering",
+  "accessLevel": 1,
+  "allowedAccessMethods": ["rfid", "fingerprint"],
+  "keypadPin": "1234",
+  "status": "active"
+}
+```
+
+**Success Response (201 Created):**
+```json
+{
+  "success": true,
+  "message": "User enrolled successfully",
+  "data": {
+    "id": "clx1234567890abcdef",
+    "userId": "BTL-25-11-13",
+    "firstName": "John",
+    "lastName": "Doe",
+    "email": "john.doe@example.com",
+    "phoneNumber": "+2348012345678",
+    "gender": "M",
+    "employeeId": "EMP-001",
+    "role": "staff",
+    "department": "Engineering",
+    "status": "active",
+    "accessLevel": 1,
+    "allowedAccessMethods": ["rfid", "fingerprint"],
+    "lastAccessAt": null,
+    "createdAt": "2025-01-15T10:30:00.000Z",
+    "updatedAt": "2025-01-15T10:30:00.000Z",
+    "profilePicture": null,
+    "rfidTags": [],
+    "fingerprintIds": []
+  }
+}
+```
+
+**Error Responses:**
+
+- `400 Bad Request` - Invalid input data or validation errors
+- `401 Unauthorized` - Invalid or missing JWT token
+- `403 Forbidden` - User does not have admin role
+- `409 Conflict` - User with email or employeeId already exists
+
+**Example Error Response (409):**
+```json
+{
+  "success": false,
+  "message": "User with this email already exists",
+  "statusCode": 409
+}
+```
+
+---
+
+### 2. Get All Users
 
 Retrieve a paginated list of all users with optional filtering.
 
@@ -90,7 +185,7 @@ GET /api/v1/admin/users-management?page=1&limit=20&status=active&role=staff
 
 ---
 
-### 2. Update User
+### 3. Update User
 
 Update user information including name, email, status, role, department, and other fields.
 
@@ -214,7 +309,7 @@ Authorization: Bearer <jwt-token>
 
 ---
 
-### 3. Update User Role
+### 4. Update User Role
 
 Update the role of a specific user.
 
@@ -295,6 +390,181 @@ Authorization: Bearer <jwt-token>
   "error": "Not Found"
 }
 ```
+
+---
+
+### 5. Add RFID Tag to User
+
+Attach an RFID tag to a user for RFID-based access.
+
+**Endpoint**: `POST /api/v1/admin/users-management/:userId/rfid-tags`
+
+**Path Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `userId` | string | Yes | User ID (format: BTL-25-11-13) |
+
+**Request Body:**
+```json
+{
+  "tag": "0xA1B2C3D4"
+}
+```
+
+**Request DTO** (`AddRfidTagDto`):
+
+| Field | Type | Required | Validation | Description |
+|-------|------|----------|------------|-------------|
+| `tag` | string | Yes | Non-empty string | RFID tag value (e.g., 0xA1B2C3D4) |
+
+**Example Request:**
+```bash
+POST /api/v1/admin/users-management/BTL-25-11-13/rfid-tags
+Content-Type: application/json
+Authorization: Bearer <jwt-token>
+
+{
+  "tag": "0xA1B2C3D4"
+}
+```
+
+**Success Response (201 Created):**
+```json
+{
+  "success": true,
+  "message": "RFID tag added successfully",
+  "data": {
+    "id": "clx1234567890",
+    "tag": "0xA1B2C3D4",
+    "userId": "BTL-25-11-13",
+    "createdAt": "2025-01-15T10:30:00.000Z"
+  }
+}
+```
+
+**Error Responses:**
+
+- `401 Unauthorized` - Invalid or missing JWT token
+- `403 Forbidden` - User does not have admin role
+- `404 Not Found` - User with the specified ID not found
+- `409 Conflict` - RFID tag already registered for this user
+
+---
+
+### 6. Register Fingerprint for User
+
+Register a fingerprint ID from the device for fingerprint-based access.
+
+**Endpoint**: `POST /api/v1/admin/users-management/:userId/fingerprints`
+
+**Path Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `userId` | string | Yes | User ID (format: BTL-25-11-13) |
+
+**Request Body:**
+```json
+{
+  "fingerprintId": 1
+}
+```
+
+**Request DTO** (`RegisterFingerprintDto`):
+
+| Field | Type | Required | Validation | Description |
+|-------|------|----------|------------|-------------|
+| `fingerprintId` | number | Yes | Integer, minimum 1 | Fingerprint ID from the device (1, 2, 3, etc.) |
+
+**Example Request:**
+```bash
+POST /api/v1/admin/users-management/BTL-25-11-13/fingerprints
+Content-Type: application/json
+Authorization: Bearer <jwt-token>
+
+{
+  "fingerprintId": 1
+}
+```
+
+**Success Response (201 Created):**
+```json
+{
+  "success": true,
+  "message": "Fingerprint registered successfully",
+  "data": {
+    "id": "clx1234567890",
+    "fingerprintId": 1,
+    "userId": "BTL-25-11-13",
+    "createdAt": "2025-01-15T10:30:00.000Z"
+  }
+}
+```
+
+**Error Responses:**
+
+- `401 Unauthorized` - Invalid or missing JWT token
+- `403 Forbidden` - User does not have admin role
+- `404 Not Found` - User with the specified ID not found
+- `409 Conflict` - Fingerprint ID already registered for this user
+
+---
+
+### 7. Set Keypad PIN for User
+
+Set or update the keypad PIN for a user. The PIN will be hashed before storage.
+
+**Endpoint**: `PATCH /api/v1/admin/users-management/:userId/keypad-pin`
+
+**Path Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `userId` | string | Yes | User ID (format: BTL-25-11-13) |
+
+**Request Body:**
+```json
+{
+  "pin": "1234"
+}
+```
+
+**Request DTO** (`SetKeypadPinDto`):
+
+| Field | Type | Required | Validation | Description |
+|-------|------|----------|------------|-------------|
+| `pin` | string | Yes | 4-10 characters | Keypad PIN (will be hashed) |
+
+**Example Request:**
+```bash
+PATCH /api/v1/admin/users-management/BTL-25-11-13/keypad-pin
+Content-Type: application/json
+Authorization: Bearer <jwt-token>
+
+{
+  "pin": "1234"
+}
+```
+
+**Success Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Keypad PIN set successfully",
+  "data": {
+    "userId": "BTL-25-11-13",
+    "updatedAt": "2025-01-15T10:30:00.000Z"
+  }
+}
+```
+
+**Error Responses:**
+
+- `400 Bad Request` - Invalid PIN (must be 4-10 characters)
+- `401 Unauthorized` - Invalid or missing JWT token
+- `403 Forbidden` - User does not have admin role
+- `404 Not Found` - User with the specified ID not found
 
 ---
 
@@ -448,6 +718,50 @@ const updateRoleData = await updateRoleResponse.json();
 
 ```typescript
 import axios from 'axios';
+
+// Enroll a new user
+const enrollUser = async (
+  token: string,
+  userData: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phoneNumber?: string;
+    gender?: string;
+    employeeId?: string;
+    role: string;
+    department?: string;
+    accessLevel?: number;
+    allowedAccessMethods: string[];
+    keypadPin?: string;
+    status: string;
+  }
+) => {
+  try {
+    const response = await axios.post(
+      'http://localhost:3000/api/v1/admin/users-management',
+      userData,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    
+    return response.data;
+  } catch (error) {
+    if (error.response?.status === 400) {
+      console.error('Invalid input data');
+    } else if (error.response?.status === 409) {
+      console.error('Email or Employee ID already exists');
+    } else if (error.response?.status === 401) {
+      console.error('Unauthorized - Invalid token');
+    } else if (error.response?.status === 403) {
+      console.error('Forbidden - Admin access required');
+    }
+    throw error;
+  }
+};
 
 // Get all users with filters
 const getUsers = async (token: string, filters?: {

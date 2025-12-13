@@ -193,10 +193,47 @@ export class AccessService {
       const allRfidTags = await this.prisma.rfidTag.findMany({
         include: {
           user: {
-            include: {
-              rfidTags: true,
-              fingerprintIds: true,
-              profilePicture: true,
+            select: {
+              id: true,
+              userId: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              phoneNumber: true,
+              gender: true,
+              employeeId: true,
+              status: true,
+              role: true,
+              department: true,
+              accessLevel: true,
+              allowedAccessMethods: true,
+              keypadPin: true,
+              lastAccessAt: true,
+              createdAt: true,
+              updatedAt: true,
+              rfidTags: {
+                select: {
+                  id: true,
+                  tag: true,
+                  createdAt: true,
+                },
+              },
+              fingerprintIds: {
+                select: {
+                  id: true,
+                  fingerprintId: true,
+                  createdAt: true,
+                },
+              },
+              profilePicture: {
+                select: {
+                  id: true,
+                  secureUrl: true,
+                  publicId: true,
+                  createdAt: true,
+                  updatedAt: true,
+                },
+              },
             },
           },
         },
@@ -342,10 +379,47 @@ export class AccessService {
         },
         include: {
           user: {
-            include: {
-              rfidTags: true,
-              fingerprintIds: true,
-              profilePicture: true,
+            select: {
+              id: true,
+              userId: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              phoneNumber: true,
+              gender: true,
+              employeeId: true,
+              status: true,
+              role: true,
+              department: true,
+              accessLevel: true,
+              allowedAccessMethods: true,
+              keypadPin: true,
+              lastAccessAt: true,
+              createdAt: true,
+              updatedAt: true,
+              rfidTags: {
+                select: {
+                  id: true,
+                  tag: true,
+                  createdAt: true,
+                },
+              },
+              fingerprintIds: {
+                select: {
+                  id: true,
+                  fingerprintId: true,
+                  createdAt: true,
+                },
+              },
+              profilePicture: {
+                select: {
+                  id: true,
+                  secureUrl: true,
+                  publicId: true,
+                  createdAt: true,
+                  updatedAt: true,
+                },
+              },
             },
           },
         },

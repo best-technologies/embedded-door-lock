@@ -383,6 +383,7 @@ export class AttendanceService {
    * Get attendance records with filters
    */
   async findAll(filterDto: FilterAttendanceDto) {
+    this.logger.info(`Fetching attendance records with filters: ${JSON.stringify(filterDto)}`, 'AttendanceService');
     try {
       const page = filterDto.page || 1;
       const limit = filterDto.limit || 20;
@@ -439,6 +440,8 @@ export class AttendanceService {
         }),
         this.prisma.attendance.count({ where }),
       ]);
+
+      this.logger.success(`Successfully fetched ${attendance.length} attendance records (total: ${total})`, 'AttendanceService');
 
       return ResponseHelper.success('Attendance records retrieved successfully', {
         data: attendance,
