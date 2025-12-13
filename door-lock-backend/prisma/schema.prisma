@@ -1,0 +1,196 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserStatus {
+  active
+  suspended
+  terminated
+}
+
+enum AccessMethod {
+  rfid
+  fingerprint
+  keypad
+}
+
+enum AccessStatus {
+  success
+  failed
+}
+
+enum DeviceStatus {
+  online
+  offline
+}
+
+enum UserRole {
+  staff
+  intern
+  nysc
+  trainee
+  admin
+  contractor
+  visitor
+}
+
+enum Gender {
+  M
+  F
+}
+
+enum Department {
+  Engineering
+  HR
+  Finance
+  Operations
+  IT
+  Sales
+  Marketing
+  Administration
+  Security
+  Maintenance
+}
+
+model User {
+  id                   String          @id @default(cuid())
+  userId               String          @unique // Format: BTL-25-11-13 (year-month-serial)
+  firstName            String
+  lastName             String
+  email                String          @unique
+  phoneNumber          String?
+  gender               Gender?
+  employeeId           String?         @unique
+  profilePicture       ProfilePicture?
+  status               UserStatus      @default(active)
+  role                 UserRole        @default(staff)
+  department           Department?
+  accessLevel          Int             @default(1) // Access level number
+  allowedAccessMethods AccessMethod[] // Array of allowed methods: [rfid, fingerprint, keypad]
+  keypadPin            String? // PIN for keypad access (hashed)
+  password             String? // Password for JWT authentication (hashed)
+  lastAccessAt         DateTime?
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+
+  // Relationships
+  rfidTags       RfidTag[]
+  fingerprintIds FingerprintId[]
+  accessLogs     AccessLog[]
+  temporaryCodes TemporaryAccessCode[]
+
+  @@index([status])
+  @@index([role])
+  @@index([role, createdAt]) // Composite index for efficient userId generation
+  @@index([department])
+  @@index([email])
+  @@index([userId])
+  @@index([accessLevel])
+  @@map("users")
+}
+
+model ProfilePicture {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  secureUrl String // Secure URL from cloud storage
+  publicId  String // Public ID from cloud storage (e.g., Cloudinary)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("profile_pictures")
+}
+
+model RfidTag {
+  id        String   @id @default(cuid())
+  tag       String // RFID tag value like "0xA1B2C3D4"
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([tag, userId])
+  @@index([tag])
+  @@index([userId])
+  @@map("rfid_tags")
+}
+
+model FingerprintId {
+  id            String   @id @default(cuid())
+  fingerprintId Int // Fingerprint ID from device (1, 2, etc.)
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now())
+
+  @@unique([fingerprintId, userId])
+  @@index([fingerprintId])
+  @@index([userId])
+  @@map("fingerprint_ids")
+}
+
+model Device {
+  id              String       @id @default(cuid())
+  deviceId        String       @unique // Custom device ID like "DOOR-001"
+  name            String
+  location        String
+  status          DeviceStatus @default(offline)
+  firmwareVersion String?
+  lastSeen        DateTime?
+  settings        Json? // DeviceSettings: { autoLockDelay, volume, ledBrightness }
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  // Relationships
+  accessLogs AccessLog[]
+
+  @@index([status])
+  @@index([deviceId])
+  @@map("devices")
+}
+
+model AccessLog {
+  id            String       @id @default(cuid())
+  logId         String       @unique // Custom log ID like "LOG-10045"
+  userId        String
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceId      String
+  device        Device       @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  method        AccessMethod
+  rfidUid       String?
+  fingerprintId Int?
+  keypadPin     String? // PIN used for keypad access (if method is keypad)
+  status        AccessStatus
+  message       String?
+  timestamp     DateTime     @default(now())
+
+  @@index([userId])
+  @@index([deviceId])
+  @@index([status])
+  @@index([method])
+  @@index([timestamp])
+  @@map("access_logs")
+}
+
+model TemporaryAccessCode {
+  id        String    @id @default(cuid())
+  code      String    @unique // 6-digit code
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime // Code expiration time
+  used      Boolean   @default(false) // Whether code has been used
+  usedAt    DateTime? // When code was used
+  createdAt DateTime  @default(now())
+
+  @@index([code])
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([used])
+  @@map("temporary_access_codes")
+}
