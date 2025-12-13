@@ -60,6 +60,21 @@ enum Department {
   Maintenance
 }
 
+enum AttendanceStatus {
+  present
+  absent
+  late
+  early_departure
+  half_day
+  holiday
+  weekend
+}
+
+enum AttendanceType {
+  check_in
+  check_out
+}
+
 model User {
   id                   String          @id @default(cuid())
   userId               String          @unique // Format: BTL-25-11-13 (year-month-serial)
@@ -86,6 +101,7 @@ model User {
   fingerprintIds FingerprintId[]
   accessLogs     AccessLog[]
   temporaryCodes TemporaryAccessCode[]
+  attendance     Attendance[]
 
   @@index([status])
   @@index([role])
@@ -196,17 +212,61 @@ model TemporaryAccessCode {
 }
 
 model PasswordResetCode {
-  id        String   @id @default(cuid())
-  code      String   @unique // 6-digit verification code
-  email     String   // Email address for password reset
+  id        String    @id @default(cuid())
+  code      String    @unique // 6-digit verification code
+  email     String // Email address for password reset
   expiresAt DateTime // Code expiration time (default: 15 minutes)
-  used      Boolean  @default(false) // Whether code has been used
+  used      Boolean   @default(false) // Whether code has been used
   usedAt    DateTime? // When code was used
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   @@index([code])
   @@index([email])
   @@index([expiresAt])
   @@index([used])
   @@map("password_reset_codes")
+}
+
+model Attendance {
+  id           String           @id @default(cuid())
+  attendanceId String           @unique // Format: ATT-YYYY-MM-DD-USERID
+  userId       String
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date         DateTime // Date of attendance (date only, time is in checkIn/checkOut)
+  checkIn      DateTime? // First access time of the day
+  checkOut     DateTime? // Last access time of the day
+  status       AttendanceStatus
+  isWorkingDay Boolean          @default(true) // Monday to Friday
+  isHoliday    Boolean          @default(false)
+  holidayName  String? // Name of holiday if applicable
+  minutesLate  Int? // Minutes late if check-in is after office opening time
+  minutesEarly Int? // Minutes early departure if check-out is before office closing time
+  totalHours   Float? // Total hours worked (calculated from checkIn to checkOut)
+  notes        String? // Additional notes or remarks
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@unique([userId, date]) // One attendance record per user per day
+  @@index([userId])
+  @@index([date])
+  @@index([status])
+  @@index([isWorkingDay])
+  @@index([isHoliday])
+  @@index([userId, date])
+  @@map("attendance")
+}
+
+model Holiday {
+  id          String   @id @default(cuid())
+  name        String // Name of the holiday (e.g., "Christmas Day", "New Year")
+  date        DateTime // Date of the holiday (date only)
+  isRecurring Boolean  @default(false) // If true, holiday repeats every year
+  description String? // Optional description
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([date]) // One holiday per date
+  @@index([date])
+  @@index([isRecurring])
+  @@map("holidays")
 }

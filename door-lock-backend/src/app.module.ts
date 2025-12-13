@@ -11,6 +11,7 @@ import { AppConfigModule } from './config/config.module';
 import { DatabaseModule } from './database/database.module';
 import { HealthModule } from './health/health.module';
 import { IdentityModule } from './identity/identity.module';
+import { AttendanceModule } from './attendance/attendance.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { IdentityModule } from './identity/identity.module';
     IdentityModule,
     UsersModule,
     AccessModule,
+    AttendanceModule,
     DevicesModule,
     SyncModule,
     DashboardModule,

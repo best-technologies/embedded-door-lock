@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional, Inject, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { CreateAccessLogDto } from './dto/create-access-log.dto';
 import { FilterAccessLogsDto } from './dto/filter-access-logs.dto';
@@ -8,14 +8,16 @@ import { VerifyTemporaryCodeDto } from './dto/verify-temporary-code.dto';
 import { AccessLog } from '../common/entities/access-log.entity';
 import { LoggerService } from '../common/logger/logger.service';
 import { ResponseHelper } from '../common/helpers/response.helper';
+import { AttendanceService } from '../attendance/attendance.service';
 
 @Injectable()
 export class AccessService {
-  private accessLogs: AccessLog[] = [];
-
   constructor(
     private readonly prisma: PrismaService,
     private readonly logger: LoggerService,
+    @Optional()
+    @Inject(forwardRef(() => AttendanceService))
+    private readonly attendanceService?: AttendanceService,
   ) {}
 
   async create(createAccessLogDto: CreateAccessLogDto) {
@@ -29,31 +31,53 @@ export class AccessService {
         'AccessService',
       );
 
-    const newLog: AccessLog = {
-      logId: `LOG-${Date.now()}`,
-      userId: createAccessLogDto.userId,
-      deviceId: createAccessLogDto.deviceId,
-      method: createAccessLogDto.method,
-      rfidUid: createAccessLogDto.rfidUid,
-      fingerprintId: createAccessLogDto.fingerprintId,
-      status: createAccessLogDto.status,
-      message: createAccessLogDto.status === 'success' ? 'Access granted' : 'Unauthorized',
-      timestamp: createAccessLogDto.timestamp
+      const timestamp = createAccessLogDto.timestamp
         ? new Date(createAccessLogDto.timestamp)
-        : new Date(),
-    };
+        : new Date();
 
-    this.accessLogs.push(newLog);
+      const logId = `LOG-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+      // Save access log to database
+      const accessLog = await this.prisma.accessLog.create({
+        data: {
+          logId,
+          userId: createAccessLogDto.userId,
+          deviceId: createAccessLogDto.deviceId,
+          method: createAccessLogDto.method,
+          rfidUid: createAccessLogDto.rfidUid,
+          fingerprintId: createAccessLogDto.fingerprintId,
+          keypadPin: null, // Keypad method not supported in current DTO
+          status: createAccessLogDto.status,
+          message: createAccessLogDto.status === 'success' ? 'Access granted' : 'Unauthorized',
+          timestamp,
+        },
+      });
+
+      // If access was successful, record attendance
+      if (createAccessLogDto.status === 'success' && this.attendanceService) {
+        try {
+          await this.attendanceService.recordAttendanceFromAccess(
+            createAccessLogDto.userId,
+            timestamp,
+          );
+        } catch (attendanceError: any) {
+          // Log attendance error but don't fail the access log creation
+          this.logger.warn(
+            `Failed to record attendance for access log ${logId}: ${attendanceError?.message}`,
+            'AccessService',
+          );
+        }
+      }
 
       this.logger.success(
-        `Access log created successfully: ${newLog.logId} (${createAccessLogDto.status})`,
+        `Access log created successfully: ${logId} (${createAccessLogDto.status})`,
         'AccessService',
       );
 
       return ResponseHelper.success('Access log created successfully', {
-      logId: newLog.logId,
+        logId: accessLog.logId,
         status: createAccessLogDto.status,
-        timestamp: newLog.timestamp,
+        timestamp: accessLog.timestamp,
       });
     } catch (error: any) {
       this.logger.error(
@@ -72,32 +96,68 @@ export class AccessService {
         'AccessService',
       );
 
-    let filtered = [...this.accessLogs];
+      const where: any = {};
 
-    if (filterDto.deviceId) {
-      filtered = filtered.filter((log) => log.deviceId === filterDto.deviceId);
-    }
+      if (filterDto.deviceId) {
+        where.deviceId = filterDto.deviceId;
+      }
 
-    if (filterDto.userId) {
-      filtered = filtered.filter((log) => log.userId === filterDto.userId);
-    }
+      if (filterDto.userId) {
+        where.userId = filterDto.userId;
+      }
 
-    if (filterDto.status) {
-      filtered = filtered.filter((log) => log.status === filterDto.status);
-    }
+      if (filterDto.status) {
+        where.status = filterDto.status;
+      }
 
-    if (filterDto.method) {
-      filtered = filtered.filter((log) => log.method === filterDto.method);
-    }
+      if (filterDto.method) {
+        where.method = filterDto.method;
+      }
 
-    // TODO: Implement date filtering and pagination
+      if (filterDto.from || filterDto.to) {
+        where.timestamp = {};
+        if (filterDto.from) {
+          where.timestamp.gte = new Date(filterDto.from);
+        }
+        if (filterDto.to) {
+          const toDate = new Date(filterDto.to);
+          toDate.setHours(23, 59, 59, 999);
+          where.timestamp.lte = toDate;
+        }
+      }
+
+      const accessLogs = await this.prisma.accessLog.findMany({
+        where,
+        include: {
+          user: {
+            select: {
+              userId: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
+          },
+          device: {
+            select: {
+              deviceId: true,
+              name: true,
+              location: true,
+            },
+          },
+        },
+        orderBy: {
+          timestamp: 'desc',
+        },
+        take: filterDto.limit || filterDto.page ? undefined : 100,
+        skip: filterDto.page && filterDto.limit ? (filterDto.page - 1) * filterDto.limit : undefined,
+      });
 
       this.logger.success(
-        `Successfully fetched ${filtered.length} access log(s)`,
+        `Successfully fetched ${accessLogs.length} access log(s)`,
         'AccessService',
       );
 
-      return ResponseHelper.success('Access logs retrieved successfully', filtered);
+      return ResponseHelper.success('Access logs retrieved successfully', accessLogs);
     } catch (error: any) {
       this.logger.error(
         `Failed to fetch access logs: ${error?.message || 'Unknown error'}`,

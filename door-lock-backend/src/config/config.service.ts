@@ -84,5 +84,22 @@ export class AppConfigService {
   get smtpFromName(): string {
     return this.configService.get<string>('SMTP_FROM_NAME', 'Door Lock System');
   }
+
+  // Office Hours Configuration
+  get officeOpeningTime(): string {
+    return this.configService.get<string>('OFFICE_OPENING_TIME', '08:00');
+  }
+
+  get officeClosingTime(): string {
+    return this.configService.get<string>('OFFICE_CLOSING_TIME', '17:00');
+  }
+
+  get lateThresholdMinutes(): number {
+    return this.configService.get<number>('LATE_THRESHOLD_MINUTES', 15);
+  }
+
+  get workingDays(): string {
+    return this.configService.get<string>('WORKING_DAYS', '1,2,3,4,5'); // Monday=1, Sunday=0
+  }
 }
 
