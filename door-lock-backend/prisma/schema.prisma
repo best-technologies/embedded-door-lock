@@ -87,7 +87,7 @@ model User {
   profilePicture       ProfilePicture?
   status               UserStatus      @default(active)
   role                 UserRole        @default(staff)
-  department           Department?
+  department           String?  @default("Engineering")
   accessLevel          Int             @default(1) // Access level number
   allowedAccessMethods AccessMethod[] // Array of allowed methods: [rfid, fingerprint, keypad]
   keypadPin            String? // PIN for keypad access (hashed)

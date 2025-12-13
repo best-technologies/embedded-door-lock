@@ -364,6 +364,10 @@ export class AccessService {
    * Verify fingerprint ID and return user if found
    */
   async verifyFingerprint(verifyFingerprintDto: VerifyFingerprintDto) {
+    this.logger.info(
+      `Verifying fingerprint ID: ${verifyFingerprintDto.fingerprintId}`,
+      'AccessService',
+    );
     try {
       const { fingerprintId, deviceId } = verifyFingerprintDto;
       

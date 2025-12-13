@@ -1,4 +1,4 @@
-import { IsInt, Min, IsString } from 'class-validator';
+import { IsInt, Min, IsString, IsOptional } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class VerifyFingerprintDto {
@@ -17,6 +17,7 @@ export class VerifyFingerprintDto {
     required: false,
   })
   @IsString()
+  @IsOptional()
   deviceId?: string;
 }
 
