@@ -194,3 +194,19 @@ model TemporaryAccessCode {
   @@index([used])
   @@map("temporary_access_codes")
 }
+
+model PasswordResetCode {
+  id        String   @id @default(cuid())
+  code      String   @unique // 6-digit verification code
+  email     String   // Email address for password reset
+  expiresAt DateTime // Code expiration time (default: 15 minutes)
+  used      Boolean  @default(false) // Whether code has been used
+  usedAt    DateTime? // When code was used
+  createdAt DateTime @default(now())
+
+  @@index([code])
+  @@index([email])
+  @@index([expiresAt])
+  @@index([used])
+  @@map("password_reset_codes")
+}

@@ -8,12 +8,14 @@ import { DatabaseModule } from '../database/database.module';
 import { LoggerModule } from '../common/logger/logger.module';
 import { AppConfigModule } from '../config/config.module';
 import { AppConfigService } from '../config/config.service';
+import { EmailModule } from '../common/email/email.module';
 
 @Module({
   imports: [
     DatabaseModule,
     LoggerModule,
     AppConfigModule,
+    EmailModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [AppConfigModule],

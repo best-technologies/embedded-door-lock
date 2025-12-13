@@ -60,5 +60,29 @@ export class AppConfigService {
   get jwtExpiresIn(): string {
     return this.configService.get<string>('JWT_EXPIRES_IN', '24h');
   }
+
+  get smtpHost(): string {
+    return this.configService.get<string>('SMTP_HOST', 'smtp.gmail.com');
+  }
+
+  get smtpPort(): number {
+    return this.configService.get<number>('SMTP_PORT', 587);
+  }
+
+  get smtpUser(): string {
+    return this.configService.get<string>('SMTP_USER', '');
+  }
+
+  get smtpPassword(): string {
+    return this.configService.get<string>('SMTP_PASSWORD', '');
+  }
+
+  get smtpFromEmail(): string {
+    return this.configService.get<string>('SMTP_FROM_EMAIL', this.smtpUser);
+  }
+
+  get smtpFromName(): string {
+    return this.configService.get<string>('SMTP_FROM_NAME', 'Door Lock System');
+  }
 }
 

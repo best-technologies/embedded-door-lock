@@ -12,7 +12,7 @@ export function RegisterDecorators() {
     HttpCode(HttpStatus.CREATED),
     ApiOperation({
       summary: 'Register a new user',
-      description: 'Register a new user account. A unique userId will be auto-generated based on role and current date. Returns a JWT access token upon successful registration.',
+      description: 'Register a new user account. A unique userId and employeeId will be auto-generated. A secure password will be automatically generated and sent to the user via email. Returns a JWT access token upon successful registration.',
     }),
     ApiBody({ type: RegisterDto }),
     ApiResponse({
@@ -47,7 +47,7 @@ export function RegisterDecorators() {
         example: {
           success: false,
           message: 'Validation failed',
-          errors: ['email must be an email', 'password must be longer than or equal to 6 characters'],
+          errors: ['email must be an email', 'role must be a valid enum value'],
         },
       },
     }),
